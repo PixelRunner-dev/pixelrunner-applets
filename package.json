@@ -1,0 +1,61 @@
+{
+  "name": "pixelrunner-applets",
+  "version": "0.0.1",
+  "description": "",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pixlet": "./bin/pixlet.mjs"
+  },
+  "bugs": {
+    "url": "https://github.com/PixelRunner-dev/pixelrunner-applets/issues"
+  },
+  "config": {
+    "project_name": "applets",
+    "remote_user": "root",
+    "remote_pass": "pixelrunner",
+    "remote_host": "192.168.5.178",
+    "remote_dir": "/home/pixelrunner/pixelrunner26/applets"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PixelRunner-dev/pixelrunner-applets.git"
+  },
+  "audit-level": "moderate",
+  "funding": "http://pixelrunner.dev/donate",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": [
+    "Pixelrunner",
+    "led",
+    "matrix",
+    "screen",
+    "display",
+    "iot",
+    "raspberry",
+    "pi",
+    "Noderunners"
+  ],
+  "author": "Pixelrunner",
+  "homepage": "https://pixelrunner.dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "remote:npm-install": "npx remote-npm install",
+    "remote:push": "npx remote-push",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@types/node": "^24.0.13",
+    "pixelrunner-shared": "github:PixelRunner-dev/pixelrunner-shared"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@tsconfig/recommended": "^1.0.10",
+    "eslint": "^9.31.0",
+    "globals": "^16.3.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0"
+  }
+}
