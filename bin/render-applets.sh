@@ -75,14 +75,16 @@ if ! command -v yq &> /dev/null; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR_APPS_PATH="vendor/tidbyt/apps"
 
 ls -alh "$SCRIPT_DIR"
 echo "vendor"
-ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH"
+ls -alh "$SCRIPT_DIR/vendor"
+echo "var"
+ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH"
 echo "app"
-ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH/buienradar"
+ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH/buienradar"
 echo "einde"
 exit 1
 
