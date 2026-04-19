@@ -16,7 +16,7 @@ getAppletsFromDbByPackageName() {
 }
 
 getAppletSchema() {
-  local schema=$(node ./bin/pixlet.mjs schema "$VENDOR_APP_PATH/$1/$2")
+  local schema=$(node ./bin/pixlet.mjs schema "$VENDOR_APPS_PATH/$1/$2")
   echo "$schema"
 }
 
@@ -29,12 +29,12 @@ renderAppletImage() {
     exit 1
   fi
 
-  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$VENDOR_APP_PATH/$packageName/$fileName")
+  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$VENDOR_APPS_PATH/$packageName/$fileName")
   echo "$image"
 }
 
 getAppletDetails() {
-  local manifest_file="$VENDOR_APP_PATH/$1/manifest.yaml"
+  local manifest_file="$VENDOR_APPS_PATH/$1/manifest.yaml"
 
   if [[ ! -f "$manifest_file" ]]; then
     echo "ERROR: Manifest file not found: $manifest_file" >&2
@@ -75,10 +75,14 @@ if ! command -v yq &> /dev/null; then
   exit 1
 fi
 
-VENDOR_APP_PATH="./vendor/tidbyt/apps"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENDOR_APPS_PATH="vendor/tidbyt/apps"
 
-ls -alh "$VENDOR_APP_PATH"
-ls -alh "$VENDOR_APP_PATH/buienradar"
+ls -alh "$SCRIPT_DIR"
+ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH"
+ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH"
+ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH/buienradar"
+ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH/buienradar"
 exit 1
 
 checkWebpDirectory
