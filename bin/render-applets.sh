@@ -72,7 +72,7 @@ if ! command -v yq &> /dev/null; then
   exit 1
 fi
 
-CURR_DIR="$(dirname "$0")"
+CURR_DIR="$(pwd)"
 
 checkWebpDirectory
 appletFiles=$(getAvailableApplets)
