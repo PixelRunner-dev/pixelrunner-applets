@@ -64,7 +64,7 @@ for file in $appletFiles; do
   renderAppletImage "$file"
 
   appletRows=$(getAppletsFromDbByPackageName "$file")
-  if [ -n "$appletRows" ]; then continue; fi
+  if [ "$1" == "--skip-db" ] || [ -n "$appletRows" ]; then continue; fi
 
   echo "(new applet) - adding record in database"
 
