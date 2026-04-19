@@ -31,10 +31,16 @@ renderAppletImage() {
 }
 
 getAppletDetails() {
+  echo "==========START=========="
+  pwd
+  echo "\$1 = $1"
+  echo "\$CURR_DIR = $CURR_DIR"
+  # ls "$CURR_DIR/applets"
+  ls -L "$CURR_DIR/applets/$1"
+  ls -L "$CURR_DIR/applets/$1/"
   echo "$CURR_DIR/applets/$1/manifest.yaml"
   file "$CURR_DIR/applets/$1/manifest.yaml"
-  ls "$CURR_DIR/applets"
-  ls "$CURR_DIR/applets/$1/"
+  echo "========== END =========="
   exit 1
 
   # if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
