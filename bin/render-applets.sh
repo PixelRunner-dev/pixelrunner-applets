@@ -6,8 +6,8 @@ DATABASE_FILE="../db.sqlite"
 WEBP_LOCATION="./public"
 
 getAvailableApplets() {
-  local files=$(find applets -type l)
-  echo "${files//applets\//}"
+  local applets=$(cat ./applets.yml | yq -r '.[]')
+  echo "$applets"
 }
 
 getAppletsFromDbByPackageName() {
@@ -16,44 +16,27 @@ getAppletsFromDbByPackageName() {
 }
 
 getAppletSchema() {
-  local schema=$(node ./bin/pixlet.mjs schema "applets/$1/$2")
+  local schema=$(node ./bin/pixlet.mjs schema "$VENDOR_APP_PATH/$1/$2")
   echo "$schema"
 }
 
 renderAppletImage() {
   local packageName=$(getAppletDetails "$1" 'packageName')
-  echo "debug(packageName): $packageName"
   local fileName=$(getAppletDetails "$1" 'fileName')
-  echo "debug(fileName): $fileName"
 
-  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "applets/$packageName/$fileName")
+  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$VENDOR_APP_PATH/$packageName/$fileName")
   echo "$image"
 }
 
 getAppletDetails() {
-  # Resolve the symlink that points to the vendor directory
-  local applet_target
-  applet_target=$(readlink -f "$CURR_DIR/applets/$1")
-  if [[ -z $applet_target ]]; then
-    echo "ERROR: Could not resolve symlink for '$1'" >&2
+  local manifest_file="$VENDOR_APP_PATH/$1/manifest.yaml"
+
+  if [[ ! -f "$manifest_file" ]]; then
+    echo "ERROR: Manifest file not found: $manifest_file" >&2
     exit 1
   fi
 
-  # Build the absolute path to the manifest file
-  local manifest_path="$applet_target/manifest.yaml"
-  echo "Manifest path resolved to: $manifest_path"
-
-  if [[ ! -f "$manifest_path" ]]; then
-    echo "ERROR: Manifest file not found at $manifest_path" >&2
-    exit 1
-  fi
-
-  # Show the path and its type for debugging
-  ls -L "$manifest_path"
-  file "$manifest_path"
-
-  # Read and output the requested field
-  local manifest=$(cat "$manifest_path" | yq ".$2")
+  local manifest=$(cat "$manifest_file" | yq ".$2")
   echo "$manifest"
 }
 
@@ -87,31 +70,30 @@ if ! command -v yq &> /dev/null; then
   exit 1
 fi
 
-CURR_DIR="$(pwd)"
+VENDOR_APP_PATH="./vendor/tidbyt/apps"
 
 checkWebpDirectory
-appletFiles=$(getAvailableApplets)
-for file in $appletFiles; do
-  echo "Render $file"
-  renderAppletImage "$file"
-  exit
+applets=$(getAvailableApplets)
+for applet in $applets; do
+  echo "Render $applet"
+  renderAppletImage "$applet"
 
   if [ "$1" == "--skip-db" ]; then
     echo "-skipping database tasks-"
     continue
   fi
 
-  appletRows=$(getAppletsFromDbByPackageName "$file")
+  appletRows=$(getAppletsFromDbByPackageName "$applet")
   if [ -n "$appletRows" ]; then continue; fi
 
   echo "(new applet) - adding record in database"
 
-  name=$(escape "$(getAppletDetails "$file" 'name')")
-  summary=$(escape "$(getAppletDetails "$file" 'summary')")
-  desc=$(escape "$(getAppletDetails "$file" 'desc')")
-  author=$(escape "$(getAppletDetails "$file" 'author')")
-  fileName=$(escape "$(getAppletDetails "$file" 'fileName')")
-  packageName=$(escape "$(getAppletDetails "$file" 'packageName')")
+  name=$(escape "$(getAppletDetails "$applet" 'name')")
+  summary=$(escape "$(getAppletDetails "$applet" 'summary')")
+  desc=$(escape "$(getAppletDetails "$applet" 'desc')")
+  author=$(escape "$(getAppletDetails "$applet" 'author')")
+  fileName=$(escape "$(getAppletDetails "$applet" 'fileName')")
+  packageName=$(escape "$(getAppletDetails "$applet" 'packageName')")
   appletSchema=$(escape "$(getAppletSchema "$packageName" "$fileName")")
   insertAppletInDb "$name" "$summary" "$desc" "$author" "" "$fileName" "$packageName" "$appletSchema"
 
