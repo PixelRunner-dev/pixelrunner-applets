@@ -78,6 +78,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR_APPS_PATH="vendor/tidbyt/apps"
 
+echo "script dir"
+ls -alh "$SCRIPT_DIR"
+echo "vendor"
+ls -alh "$SCRIPT_DIR/vendor"
+echo "tidbyt"
 ls -alh "$SCRIPT_DIR/vendor/tidbyt"
 echo "apps"
 ls -alh "$SCRIPT_DIR/vendor/tidbyt/apps"
@@ -85,7 +90,7 @@ echo "var"
 VARP1="$SCRIPT_DIR/$VENDOR_APPS_PATH"
 ls -alh "$VARP1"
 echo "app"
-ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH/buienradar"
+ls -alh "$VARP1/buienradar"
 echo "einde"
 exit 1
 
