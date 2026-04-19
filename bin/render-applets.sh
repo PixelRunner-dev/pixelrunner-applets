@@ -34,7 +34,8 @@ getAppletDetails() {
   echo "$CURR_DIR/applets/$1/manifest.yaml"
   file "$CURR_DIR/applets/$1/manifest.yaml"
   ls "$CURR_DIR/applets"
-  ls "$CURR_DIR/applets/$1"
+  ls "$CURR_DIR/applets/$1/"
+  exit 1
 
   # if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
   #   echo "file exist!"
@@ -84,6 +85,7 @@ appletFiles=$(getAvailableApplets)
 for file in $appletFiles; do
   echo "Render $file"
   renderAppletImage "$file"
+  exit
 
   if [ "$1" == "--skip-db" ]; then
     echo "-skipping database tasks-"
