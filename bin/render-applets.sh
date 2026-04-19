@@ -31,14 +31,18 @@ renderAppletImage() {
 }
 
 getAppletDetails() {
-  if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
-    echo "file exist!"
-  else
-    echo "file does not exist!"
-    return
-  fi
+  echo "$CURR_DIR/applets/$1/manifest.yaml"
+  file "$CURR_DIR/applets/$1/manifest.yaml"
+  ls "$CURR_DIR/applets"
+  ls "$CURR_DIR/applets/$1"
 
-  # echo "debug(getAppletDetails): "
+  # if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
+  #   echo "file exist!"
+  # else
+  #   echo "file does not exist!"
+  #   return
+  # fi
+
   local manifest=$(cat "$CURR_DIR/applets/$1/manifest.yaml" | yq ".$2")
   echo "$manifest"
 }
