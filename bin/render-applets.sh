@@ -24,6 +24,11 @@ renderAppletImage() {
   local packageName=$(getAppletDetails "$1" 'packageName')
   local fileName=$(getAppletDetails "$1" 'fileName')
 
+  if [ -z "$packageName" ] || [ -z "$fileName" ]; then
+    echo "ERROR: Incorrect manifest analysis: [$packageName] [$fileName]"
+    exit 1
+  fi
+
   local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$VENDOR_APP_PATH/$packageName/$fileName")
   echo "$image"
 }
@@ -71,6 +76,10 @@ if ! command -v yq &> /dev/null; then
 fi
 
 VENDOR_APP_PATH="./vendor/tidbyt/apps"
+
+ls -alh "$VENDOR_APP_PATH"
+ls -alh "$VENDOR_APP_PATH/buienradar"
+exit 1
 
 checkWebpDirectory
 applets=$(getAvailableApplets)
