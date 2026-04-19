@@ -31,26 +31,29 @@ renderAppletImage() {
 }
 
 getAppletDetails() {
-  echo "==========START=========="
-  pwd
-  echo "\$1 = $1"
-  echo "\$CURR_DIR = $CURR_DIR"
-  # ls "$CURR_DIR/applets"
-  ls -L "$CURR_DIR/applets/$1"
-  ls -L "$CURR_DIR/applets/$1/"
-  echo "$CURR_DIR/applets/$1/manifest.yaml"
-  file "$CURR_DIR/applets/$1/manifest.yaml"
-  echo "========== END =========="
-  exit 1
+  # Resolve the symlink that points to the vendor directory
+  local applet_target
+  applet_target=$(readlink -f "$CURR_DIR/applets/$1")
+  if [[ -z $applet_target ]]; then
+    echo "ERROR: Could not resolve symlink for '$1'" >&2
+    exit 1
+  fi
 
-  # if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
-  #   echo "file exist!"
-  # else
-  #   echo "file does not exist!"
-  #   return
-  # fi
+  # Build the absolute path to the manifest file
+  local manifest_path="$applet_target/manifest.yaml"
+  echo "Manifest path resolved to: $manifest_path"
 
-  local manifest=$(cat "$CURR_DIR/applets/$1/manifest.yaml" | yq ".$2")
+  if [[ ! -f "$manifest_path" ]]; then
+    echo "ERROR: Manifest file not found at $manifest_path" >&2
+    exit 1
+  fi
+
+  # Show the path and its type for debugging
+  ls -L "$manifest_path"
+  file "$manifest_path"
+
+  # Read and output the requested field
+  local manifest=$(cat "$manifest_path" | yq ".$2")
   echo "$manifest"
 }
 
