@@ -79,10 +79,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENDOR_APPS_PATH="vendor/tidbyt/apps"
 
 ls -alh "$SCRIPT_DIR"
-ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH"
+echo "vendor"
 ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH"
-ls -alh "$SCRIPT_DIR/$VENDOR_APPS_PATH/buienradar"
+echo "app"
 ls -alh "$SCRIPT_DIR/../$VENDOR_APPS_PATH/buienradar"
+echo "einde"
 exit 1
 
 checkWebpDirectory
