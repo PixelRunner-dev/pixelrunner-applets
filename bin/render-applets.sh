@@ -41,8 +41,8 @@ getAppletDetails() {
     exit 1
   fi
 
-  local manifest=$(cat "$manifest_file" | yq ".$2")
-  echo $manifest
+  local manifest=$(cat "$manifest_file" | yq -r ".$2")
+  echo "$manifest"
 }
 
 insertAppletInDb() {
