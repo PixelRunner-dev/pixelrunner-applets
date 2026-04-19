@@ -31,18 +31,14 @@ renderAppletImage() {
 }
 
 getAppletDetails() {
-  if ! command -v yq &> /dev/null; then
-    echo "yq does not exist"
-  fi
-
-  if [ -f "./applets/$1/manifest.yaml" ]; then
+  if [ -f "$CURR_DIR/applets/$1/manifest.yaml" ]; then
     echo "file exist!"
   else
     echo "file does not exist!"
   fi
 
   # echo "debug(getAppletDetails): "
-  local manifest=$(cat "./applets/$1/manifest.yaml" | yq ".$2")
+  local manifest=$(cat "$CURR_DIR/applets/$1/manifest.yaml" | yq ".$2")
   echo "$manifest"
 }
 
@@ -70,6 +66,13 @@ escape() {
 }
 
 ################################################################################
+
+if ! command -v yq &> /dev/null; then
+  echo "Error: install 'yq' as this is a required dependency."
+  exit 1
+fi
+
+CURR_DIR="$(dirname "$0")"
 
 checkWebpDirectory
 appletFiles=$(getAvailableApplets)
