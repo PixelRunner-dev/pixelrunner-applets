@@ -1,0 +1,3 @@
+[submodule "vendor/tronbyt"]
+	path = vendor/tronbyt
+	url = https://github.com/PixelRunner-dev/tronbyt-apps.git

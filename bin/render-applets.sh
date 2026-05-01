@@ -76,7 +76,8 @@ if ! command -v yq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENDOR_APPS_PATH="vendor/tidbyt/apps"
+# VENDOR_APPS_PATH="vendor/tidbyt/apps"
+VENDOR_APPS_PATH="vendor/tronbyt/apps"
 
 checkWebpDirectory
 applets=$(getAvailableApplets)
