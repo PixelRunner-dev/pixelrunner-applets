@@ -36,7 +36,9 @@ jobs:
         run: npm install
 
       - name: (Re-)render applets
-        run: npm run render -- --skip-db
+        run: |
+          npm run render -- --skip-db
+          npm run copy-applets-list
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
