@@ -44,8 +44,7 @@
     "remote:npm-install": "npx remote-npm install",
     "remote:push": "npx remote-push",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "render": "./bin/render-applets.sh",
-    "copy-applets-list": "cp -a ./applets.yml public/"
+    "render": "./bin/render-applets.sh"
   },
   "dependencies": {
     "@types/node": "^24.0.13",
