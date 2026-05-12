@@ -2,7 +2,7 @@ name: Render webp of applets and deploy to GitHub Pages
 
 on:
   schedule:
-    - cron: '0 */1 * * *'  # Runs every hour
+    - cron: '0 0,5-23 * * *'  # Runs every hour between 6:00 - 1:00 UTC+1
   workflow_dispatch:
 
 jobs:
