@@ -4,20 +4,22 @@ set -e
 
 DATABASE_FILE="../db.sqlite"
 WEBP_LOCATION="./public"
+CONTROLLER_DIR=""
+MIGRATIONS_DIR=""
+GENERATED_MIGRATION_FILE=""
+MIGRATION_TEMP_DIR=""
+MIGRATION_BACKUP_DIR=""
+NEW_APPLET_COUNT=0
 
 getAvailableApplets() {
   local applets=$(find "$SCRIPT_DIR/$VENDOR_APPS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
   echo "$applets"
 }
 
-getAppletsFromDbByPackageName() {
-  local records=$(sqlite3 -json $DATABASE_FILE "select * from applets where package_name = '$1';")
-  echo "$records"
-}
-
-getAppletSchema() {
-  local schema=$(node ./bin/pixlet.mjs schema "$SCRIPT_DIR/$VENDOR_APPS_PATH/$1/$2")
-  echo "$schema"
+appletExistsInDb() {
+  local packageName=$(escape "$1")
+  local count=$(sqlite3 "$DATABASE_FILE" "select count(*) from applets where package_name = '$packageName';")
+  [ "$count" -gt 0 ]
 }
 
 renderAppletImage() {
@@ -45,14 +47,6 @@ getAppletDetails() {
   echo "$manifest"
 }
 
-insertAppletInDb() {
-  local name="$1" summary="$2" desc="$3" author="$4" tags="$5" fileName="$6" packageName="$7" schema="$8"
-  local sql="INSERT INTO applets (name, summary, desc, author, tags, file_name, package_name, schema) VALUES ('$name', '$summary', '$desc', '$author', '$tags', '$fileName', '$packageName', '$schema');"
-
-  # echo "SQL: $sql"
-  sqlite3 "$DATABASE_FILE" "$sql"
-}
-
 checkWebpDirectory() {
   if [ ! -d "$WEBP_LOCATION" ]; then
     mkdir -p "$WEBP_LOCATION"
@@ -68,6 +62,91 @@ escape() {
   printf '%s' "$s"
 }
 
+hasFlag() {
+  local flag="$1"
+  shift
+
+  for arg in "$@"; do
+    if [ "$arg" == "$flag" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+cleanupTemp() {
+  if [ -n "$MIGRATION_TEMP_DIR" ] && [ -d "$MIGRATION_TEMP_DIR" ]; then
+    rm -rf "$MIGRATION_TEMP_DIR"
+  fi
+}
+
+prepareMigrationFile() {
+  local migrationName="new_applets_$(date +%F)"
+
+  CONTROLLER_DIR="$SCRIPT_DIR/../controller"
+  MIGRATIONS_DIR="$CONTROLLER_DIR/src/lib/db/migrations"
+
+  if [ ! -d "$CONTROLLER_DIR" ]; then
+    echo "ERROR: Controller directory not found: $CONTROLLER_DIR" >&2
+    exit 1
+  fi
+
+  if [ ! -d "$MIGRATIONS_DIR" ]; then
+    echo "ERROR: Migrations directory not found: $MIGRATIONS_DIR" >&2
+    exit 1
+  fi
+
+  MIGRATION_TEMP_DIR=$(mktemp -d)
+  MIGRATION_BACKUP_DIR="$MIGRATION_TEMP_DIR/migrations"
+  cp -R "$MIGRATIONS_DIR" "$MIGRATION_BACKUP_DIR"
+
+  echo "Generate migration $migrationName"
+  (cd "$CONTROLLER_DIR" && npm run db:generate -- --custom --name="$migrationName")
+
+  GENERATED_MIGRATION_FILE=$(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name "*_${migrationName}.sql" | sort | tail -n 1)
+
+  if [ -z "$GENERATED_MIGRATION_FILE" ]; then
+    echo "ERROR: Generated migration file not found for $migrationName" >&2
+    exit 1
+  fi
+}
+
+appendAppletToMigration() {
+  local name="$1" summary="$2" desc="$3" author="$4" fileName="$5" packageName="$6"
+
+  if [ "$NEW_APPLET_COUNT" -eq 0 ]; then
+    printf "\nINSERT INTO applets (\`name\`, \`summary\`, \`desc\`, \`author\`, \`is_official_applet\`, \`file_name\`, \`package_name\`)\nVALUES\n" >> "$GENERATED_MIGRATION_FILE"
+  else
+    printf ",\n" >> "$GENERATED_MIGRATION_FILE"
+  fi
+
+  printf "  ('%s', '%s', '%s', '%s', 0, '%s', '%s')" "$name" "$summary" "$desc" "$author" "$fileName" "$packageName" >> "$GENERATED_MIGRATION_FILE"
+  NEW_APPLET_COUNT=$((NEW_APPLET_COUNT + 1))
+}
+
+restoreMigrationBackup() {
+  if [ -n "$MIGRATION_BACKUP_DIR" ] && [ -d "$MIGRATION_BACKUP_DIR" ]; then
+    rm -rf "$MIGRATIONS_DIR"
+    cp -R "$MIGRATION_BACKUP_DIR" "$MIGRATIONS_DIR"
+  fi
+}
+
+finalizeMigrationFile() {
+  if [ -z "$GENERATED_MIGRATION_FILE" ]; then
+    return
+  fi
+
+  if [ "$NEW_APPLET_COUNT" -eq 0 ]; then
+    restoreMigrationBackup
+    echo "No new applets found; removed generated migration."
+    return
+  fi
+
+  printf ";\n" >> "$GENERATED_MIGRATION_FILE"
+  echo "Added $NEW_APPLET_COUNT new applet(s) to $GENERATED_MIGRATION_FILE"
+}
+
 ################################################################################
 
 if ! command -v yq &> /dev/null; then
@@ -78,6 +157,15 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # VENDOR_APPS_PATH="vendor/tidbyt/apps"
 VENDOR_APPS_PATH="vendor/tronbyt/apps"
+SKIP_DB=false
+
+trap cleanupTemp EXIT
+
+if hasFlag "--skip-db" "$@"; then
+  SKIP_DB=true
+else
+  prepareMigrationFile
+fi
 
 checkWebpDirectory
 applets=$(getAvailableApplets)
@@ -85,15 +173,14 @@ for applet in $applets; do
   echo "Render $applet"
   renderAppletImage "$applet"
 
-  if [ "$1" == "--skip-db" ]; then
+  if [ "$SKIP_DB" == "true" ]; then
     echo "-skipping database tasks-"
     continue
   fi
 
-  appletRows=$(getAppletsFromDbByPackageName "$applet")
-  if [ -n "$appletRows" ]; then continue; fi
+  if appletExistsInDb "$applet"; then continue; fi
 
-  echo "(new applet) - adding record in database"
+  echo "(new applet) - appending record to migration"
 
   name=$(escape "$(getAppletDetails "$applet" 'name')")
   summary=$(escape "$(getAppletDetails "$applet" 'summary')")
@@ -101,8 +188,9 @@ for applet in $applets; do
   author=$(escape "$(getAppletDetails "$applet" 'author')")
   fileName=$(escape "$(getAppletDetails "$applet" 'fileName')")
   packageName=$(escape "$(getAppletDetails "$applet" 'packageName')")
-  appletSchema=$(escape "$(getAppletSchema "$packageName" "$fileName")")
-  insertAppletInDb "$name" "$summary" "$desc" "$author" "" "$fileName" "$packageName" "$appletSchema"
+  appendAppletToMigration "$name" "$summary" "$desc" "$author" "$fileName" "$packageName"
 
   echo
 done
+
+finalizeMigrationFile
