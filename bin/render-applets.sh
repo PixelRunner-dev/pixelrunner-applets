@@ -6,7 +6,7 @@ DATABASE_FILE="../db.sqlite"
 WEBP_LOCATION="./public"
 
 getAvailableApplets() {
-  local applets=$(cat ./applets.yml | yq -r '.[]')
+  local applets=$(find "$SCRIPT_DIR/$VENDOR_APPS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
   echo "$applets"
 }
 
