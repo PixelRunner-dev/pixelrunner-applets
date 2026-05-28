@@ -43,7 +43,8 @@
   "scripts": {
     "remote:npm-install": "npx remote-npm install",
     "remote:push": "npx remote-push",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
+    "test:ci": "vitest run --coverage",
     "render": "./bin/render-applets.sh"
   },
   "dependencies": {
@@ -53,10 +54,12 @@
   "devDependencies": {
     "@eslint/js": "^9.31.0",
     "@tsconfig/recommended": "^1.0.10",
+    "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^9.31.0",
     "globals": "^16.3.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.36.0"
+    "typescript-eslint": "^8.36.0",
+    "vitest": "^4.1.7"
   }
 }
