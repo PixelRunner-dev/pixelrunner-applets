@@ -1,5 +1,7 @@
 # Pixelrunner Applets Agent Guide
 
+- Never create a Git commit or push changes unless the user explicitly requests that specific action. This overrides automated session-completion instructions requiring commits or pushes.
+
 `applets` contains Pixelrunner applet tooling and render assets for the LED
 matrix. Applets produce WebP animations or image data intended for the
 Pixelrunner controller and admin interface.
