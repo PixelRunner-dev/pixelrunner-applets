@@ -17,8 +17,8 @@ getAvailableApplets() {
 }
 
 appletExistsInDb() {
-  local packageName=$(escape "$1")
-  local count=$(sqlite3 "$DATABASE_FILE" "select count(*) from applets where package_name = '$packageName';")
+  local count
+  count=$(sqlite3 "$DATABASE_FILE" "select count(*) from applets where package_name = CAST(X'$(hex_value "$1")' AS TEXT);")
   [ "$count" -gt 0 ]
 }
 
@@ -53,13 +53,8 @@ checkWebpDirectory() {
   fi
 }
 
-escape() {
-  local s="$1"
-  s="${s//$'\r'/}"
-  s="${s//$'\n'/ }"
-  s="$(printf '%s' "$s" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-  s="${s//\'/''}"
-  printf '%s' "$s"
+hex_value() {
+  printf '%s' "$1" | xxd -p | tr -d '\n'
 }
 
 hasFlag() {
@@ -121,7 +116,8 @@ appendAppletToMigration() {
     printf ",\n" >> "$GENERATED_MIGRATION_FILE"
   fi
 
-  printf "  ('%s', '%s', '%s', '%s', 0, '%s', '%s')" "$name" "$summary" "$desc" "$author" "$fileName" "$packageName" >> "$GENERATED_MIGRATION_FILE"
+  printf "  (CAST(X'%s' AS TEXT), CAST(X'%s' AS TEXT), CAST(X'%s' AS TEXT), CAST(X'%s' AS TEXT), 0, CAST(X'%s' AS TEXT), CAST(X'%s' AS TEXT))" \
+    "$(hex_value "$name")" "$(hex_value "$summary")" "$(hex_value "$desc")" "$(hex_value "$author")" "$(hex_value "$fileName")" "$(hex_value "$packageName")" >> "$GENERATED_MIGRATION_FILE"
   NEW_APPLET_COUNT=$((NEW_APPLET_COUNT + 1))
 }
 
@@ -182,12 +178,12 @@ while IFS= read -r applet; do
 
   echo "(new applet) - appending record to migration"
 
-  name=$(escape "$(getAppletDetails "$applet" 'name')")
-  summary=$(escape "$(getAppletDetails "$applet" 'summary')")
-  desc=$(escape "$(getAppletDetails "$applet" 'desc')")
-  author=$(escape "$(getAppletDetails "$applet" 'author')")
-  fileName=$(escape "$(getAppletDetails "$applet" 'fileName')")
-  packageName=$(escape "$(getAppletDetails "$applet" 'packageName')")
+  name=$(getAppletDetails "$applet" 'name')
+  summary=$(getAppletDetails "$applet" 'summary')
+  desc=$(getAppletDetails "$applet" 'desc')
+  author=$(getAppletDetails "$applet" 'author')
+  fileName=$(getAppletDetails "$applet" 'fileName')
+  packageName=$(getAppletDetails "$applet" 'packageName')
   appendAppletToMigration "$name" "$summary" "$desc" "$author" "$fileName" "$packageName"
 
   echo
