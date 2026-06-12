@@ -169,7 +169,7 @@ fi
 
 checkWebpDirectory
 applets=$(getAvailableApplets)
-for applet in $applets; do
+while IFS= read -r applet; do
   echo "Render $applet"
   renderAppletImage "$applet"
 
@@ -191,6 +191,6 @@ for applet in $applets; do
   appendAppletToMigration "$name" "$summary" "$desc" "$author" "$fileName" "$packageName"
 
   echo
-done
+done <<< "$applets"
 
 finalizeMigrationFile
