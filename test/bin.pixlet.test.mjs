@@ -44,6 +44,11 @@ describe('bin/pixlet.mjs', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
+  it('exits 1 when signal-killed subprocess returns null status', async () => {
+    await importPixlet([], { spawnResult: { status: null, stdout: '', stderr: '' } });
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   it('spawns binary with platform-arch path', async () => {
     const { spawnSyncCommand } = await importPixlet();
     expect(spawnSyncCommand).toHaveBeenCalledWith(

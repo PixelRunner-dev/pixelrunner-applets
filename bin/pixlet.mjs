@@ -22,7 +22,7 @@ function execute() {
 
   console.log(binaryProcess.stderr || binaryProcess.stdout);
 
-  process.exit(binaryProcess.status);
+  process.exit(binaryProcess.status ?? 1);
 }
 
 execute();
