@@ -25,4 +25,9 @@ function execute() {
   process.exit(binaryProcess.status ?? 1);
 }
 
-execute();
+try {
+  execute();
+} catch (err) {
+  process.stderr.write(`Error: ${err.message}\n`);
+  process.exit(1);
+}
