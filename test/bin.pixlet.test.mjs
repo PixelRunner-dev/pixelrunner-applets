@@ -8,6 +8,12 @@ vi.mock('pixelrunner-shared/backend', () => ({
   cm: {
     spawnSyncCommand: vi.fn(),
   },
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 describe('bin/pixlet.mjs', () => {
@@ -90,8 +96,9 @@ describe('bin/pixlet.mjs', () => {
   });
 
   it('exits 1 when binary not found', async () => {
+    const { logger } = await import('pixelrunner-shared/backend');
     await importPixlet([], { binaryExists: false });
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('Not found'));
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Not found'));
   });
 });

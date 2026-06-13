@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { cm } from 'pixelrunner-shared/backend';
+import { cm, logger } from 'pixelrunner-shared/backend';
 
 function execute() {
   const platform = process.platform;
@@ -29,6 +29,6 @@ function execute() {
 try {
   execute();
 } catch (err) {
-  process.stderr.write(`Error: ${err.message}\n`);
+  logger.error(`Error: ${err.message}`);
   process.exit(1);
 }

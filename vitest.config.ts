@@ -7,7 +7,13 @@ export default defineConfig({
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['default'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html']
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 50,
+        functions: 50,
+        branches: 50,
+        statements: 50
+      }
     }
   }
 });

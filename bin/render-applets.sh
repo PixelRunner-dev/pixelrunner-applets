@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu
 
 DATABASE_FILE="../db.sqlite"
 WEBP_LOCATION="./public"
