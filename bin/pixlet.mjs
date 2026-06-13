@@ -20,7 +20,8 @@ function execute() {
 
   const binaryProcess = cm.spawnSyncCommand(`${binaryPath}/pixlet`, process.argv.slice(2));
 
-  console.log(binaryProcess.stderr || binaryProcess.stdout);
+  if (binaryProcess.stdout?.length) process.stdout.write(binaryProcess.stdout);
+  if (binaryProcess.stderr?.length) process.stderr.write(binaryProcess.stderr);
 
   process.exit(binaryProcess.status ?? 1);
 }
