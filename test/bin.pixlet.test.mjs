@@ -12,12 +12,14 @@ vi.mock('pixelrunner-shared/backend', () => ({
 
 describe('bin/pixlet.mjs', () => {
   let exitSpy;
-  let logSpy;
+  let stdoutSpy;
+  let stderrSpy;
 
   beforeEach(() => {
     vi.resetModules();
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
-    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -71,13 +73,13 @@ describe('bin/pixlet.mjs', () => {
   });
 
   it('logs stderr when available', async () => {
-    await importPixlet([], { spawnResult: { status: 0, stdout: 'stdout data', stderr: 'stderr msg' } });
-    expect(logSpy).toHaveBeenCalledWith('stderr msg');
+    await importPixlet([], { spawnResult: { status: 0, stdout: Buffer.from('stdout data'), stderr: Buffer.from('stderr msg') } });
+    expect(stderrSpy).toHaveBeenCalledWith(expect.objectContaining({ length: expect.any(Number) }));
   });
 
   it('logs stdout when stderr is empty', async () => {
-    await importPixlet([], { spawnResult: { status: 0, stdout: 'stdout msg', stderr: '' } });
-    expect(logSpy).toHaveBeenCalledWith('stdout msg');
+    await importPixlet([], { spawnResult: { status: 0, stdout: Buffer.from('stdout msg'), stderr: Buffer.alloc(0) } });
+    expect(stdoutSpy).toHaveBeenCalled();
   });
 
   it('checks existsSync with platform-arch binary directory', async () => {
@@ -87,7 +89,9 @@ describe('bin/pixlet.mjs', () => {
     );
   });
 
-  it('throws when binary not found', async () => {
-    await expect(importPixlet([], { binaryExists: false })).rejects.toThrow('Not found');
+  it('exits 1 when binary not found', async () => {
+    await importPixlet([], { binaryExists: false });
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('Not found'));
   });
 });

@@ -48,11 +48,11 @@
     "render": "./bin/render-applets.sh"
   },
   "dependencies": {
-    "globals": "^17.6.0",
     "pixelrunner-shared": "github:PixelRunner-dev/pixelrunner-shared"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "globals": "^17.6.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.13.0",
     "@vitest/coverage-v8": "^4.1.8",
