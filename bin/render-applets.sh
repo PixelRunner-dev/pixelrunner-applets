@@ -44,6 +44,7 @@ getAppletDetails() {
   fi
 
   local manifest=$(cat "$manifest_file" | yq -r ".$2")
+  [ "$manifest" = "null" ] && { echo "ERROR: missing field '$2' in $manifest_file" >&2; exit 1; }
   echo "$manifest"
 }
 
