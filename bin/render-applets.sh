@@ -36,7 +36,8 @@ renderAppletImage() {
 }
 
 getAppletDetails() {
-  local manifest_file="$SCRIPT_DIR/$VENDOR_APPS_PATH/$1/manifest.yaml"
+  local applet_dir="$SCRIPT_DIR/$VENDOR_APPS_PATH/$1"
+  local manifest_file="$applet_dir/manifest.yaml"
 
   if [[ ! -f "$manifest_file" ]]; then
     echo "ERROR: Manifest file not found: $manifest_file" >&2
@@ -44,7 +45,29 @@ getAppletDetails() {
   fi
 
   local manifest=$(cat "$manifest_file" | yq -r ".$2")
-  [ "$manifest" = "null" ] && { echo "ERROR: missing field '$2' in $manifest_file" >&2; exit 1; }
+  if [ "$manifest" = "null" ]; then
+    case "$2" in
+      packageName)
+        echo "$1"
+        return 0
+        ;;
+      fileName)
+        local star_files star_count
+        star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
+        star_count=$(printf '%s\n' "$star_files" | grep -c .)
+        if [ "$star_count" -ne 1 ]; then
+          echo "ERROR: missing field 'fileName' in $manifest_file; expected exactly one *.star in $applet_dir but found $star_count" >&2
+          exit 1
+        fi
+        basename "$star_files"
+        return 0
+        ;;
+      *)
+        echo "ERROR: missing field '$2' in $manifest_file" >&2
+        exit 1
+        ;;
+    esac
+  fi
   echo "$manifest"
 }
 
