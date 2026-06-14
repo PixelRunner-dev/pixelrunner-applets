@@ -52,15 +52,19 @@ getAppletDetails() {
         return 0
         ;;
       fileName)
+        if [ -f "$applet_dir/$1.star" ]; then
+          echo "$1.star"
+          return 0
+        fi
         local star_files star_count
         star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
         star_count=$(printf '%s\n' "$star_files" | grep -c .)
-        if [ "$star_count" -ne 1 ]; then
-          echo "ERROR: missing field 'fileName' in $manifest_file; expected exactly one *.star in $applet_dir but found $star_count" >&2
-          exit 1
+        if [ "$star_count" -eq 1 ]; then
+          basename "$star_files"
+          return 0
         fi
-        basename "$star_files"
-        return 0
+        echo "ERROR: missing field 'fileName' in $manifest_file; no $1.star and could not pick a unique *.star in $applet_dir (found $star_count)" >&2
+        exit 1
         ;;
       *)
         echo "ERROR: missing field '$2' in $manifest_file" >&2
