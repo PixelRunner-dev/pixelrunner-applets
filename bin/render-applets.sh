@@ -23,8 +23,8 @@ appletExistsInDb() {
 }
 
 renderAppletImage() {
-  local packageName=$(getAppletDetails "$1" 'packageName')
-  local fileName=$(getAppletDetails "$1" 'fileName')
+  local packageName="$1"
+  local fileName="$2"
 
   if [ -z "$packageName" ] || [ -z "$fileName" ]; then
     echo "ERROR: Incorrect manifest analysis: [$packageName] [$fileName]"
@@ -35,7 +35,20 @@ renderAppletImage() {
   echo "$image"
 }
 
-getAppletDetails() {
+# Exit with an error when a required manifest field is missing (literal "null").
+requireManifestField() {
+  if [ "$2" = "null" ]; then
+    echo "ERROR: missing field '$1' in $3" >&2
+    exit 1
+  fi
+}
+
+# Parse an applet manifest in a single yq pass and populate detail variables.
+# Sets: APPLET_NAME, APPLET_SUMMARY, APPLET_DESC, APPLET_AUTHOR,
+#       APPLET_PACKAGE_NAME, APPLET_FILE_NAME.
+# Missing fields are reported as the literal "null"; packageName and fileName
+# get their derived fallbacks applied here (they are always needed for rendering).
+loadAppletDetails() {
   local applet_dir="$SCRIPT_DIR/$VENDOR_APPS_PATH/$1"
   local manifest_file="$applet_dir/manifest.yaml"
 
@@ -44,35 +57,32 @@ getAppletDetails() {
     exit 1
   fi
 
-  local manifest=$(cat "$manifest_file" | yq -r ".$2")
-  if [ "$manifest" = "null" ]; then
-    case "$2" in
-      packageName)
-        echo "$1"
-        return 0
-        ;;
-      fileName)
-        if [ -f "$applet_dir/$1.star" ]; then
-          echo "$1.star"
-          return 0
-        fi
-        local star_files star_count
-        star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
-        star_count=$(printf '%s\n' "$star_files" | grep -c .)
-        if [ "$star_count" -eq 1 ]; then
-          basename "$star_files"
-          return 0
-        fi
+  # Single fork+yq pass extracts every consumed field as a TSV row.
+  IFS=$'\t' read -r APPLET_NAME APPLET_SUMMARY APPLET_DESC APPLET_AUTHOR APPLET_PACKAGE_NAME APPLET_FILE_NAME < <(
+    yq -r '[.name, .summary, .desc, .author, .packageName, .fileName] | map(. // "null") | @tsv' "$manifest_file"
+  )
+
+  # packageName fallback: the applet directory name.
+  if [ "$APPLET_PACKAGE_NAME" = "null" ]; then
+    APPLET_PACKAGE_NAME="$1"
+  fi
+
+  # fileName fallback: <applet>.star, otherwise a unique *.star in the directory.
+  if [ "$APPLET_FILE_NAME" = "null" ]; then
+    if [ -f "$applet_dir/$1.star" ]; then
+      APPLET_FILE_NAME="$1.star"
+    else
+      local star_files star_count
+      star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
+      star_count=$(printf '%s\n' "$star_files" | grep -c .)
+      if [ "$star_count" -eq 1 ]; then
+        APPLET_FILE_NAME=$(basename "$star_files")
+      else
         echo "ERROR: missing field 'fileName' in $manifest_file; no $1.star and could not pick a unique *.star in $applet_dir (found $star_count)" >&2
         exit 1
-        ;;
-      *)
-        echo "ERROR: missing field '$2' in $manifest_file" >&2
-        exit 1
-        ;;
-    esac
+      fi
+    fi
   fi
-  echo "$manifest"
 }
 
 checkWebpDirectory() {
@@ -195,7 +205,8 @@ checkWebpDirectory
 applets=$(getAvailableApplets)
 while IFS= read -r applet; do
   echo "Render $applet"
-  renderAppletImage "$applet"
+  loadAppletDetails "$applet"
+  renderAppletImage "$APPLET_PACKAGE_NAME" "$APPLET_FILE_NAME"
 
   if [ "$SKIP_DB" == "true" ]; then
     echo "-skipping database tasks-"
@@ -206,13 +217,13 @@ while IFS= read -r applet; do
 
   echo "(new applet) - appending record to migration"
 
-  name=$(getAppletDetails "$applet" 'name')
-  summary=$(getAppletDetails "$applet" 'summary')
-  desc=$(getAppletDetails "$applet" 'desc')
-  author=$(getAppletDetails "$applet" 'author')
-  fileName=$(getAppletDetails "$applet" 'fileName')
-  packageName=$(getAppletDetails "$applet" 'packageName')
-  appendAppletToMigration "$name" "$summary" "$desc" "$author" "$fileName" "$packageName"
+  manifest_file="$SCRIPT_DIR/$VENDOR_APPS_PATH/$applet/manifest.yaml"
+  requireManifestField 'name' "$APPLET_NAME" "$manifest_file"
+  requireManifestField 'summary' "$APPLET_SUMMARY" "$manifest_file"
+  requireManifestField 'desc' "$APPLET_DESC" "$manifest_file"
+  requireManifestField 'author' "$APPLET_AUTHOR" "$manifest_file"
+
+  appendAppletToMigration "$APPLET_NAME" "$APPLET_SUMMARY" "$APPLET_DESC" "$APPLET_AUTHOR" "$APPLET_FILE_NAME" "$APPLET_PACKAGE_NAME"
 
   echo
 done <<< "$applets"
