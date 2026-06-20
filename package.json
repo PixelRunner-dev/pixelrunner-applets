@@ -45,7 +45,8 @@
     "remote:push": "npx remote-push",
     "test": "vitest",
     "test:ci": "vitest run --coverage",
-    "render": "./bin/render-applets.sh"
+    "render": "./bin/render-applets.sh",
+    "update": "./bin/update-applets-library.sh"
   },
   "dependencies": {
     "pixelrunner-shared": "github:PixelRunner-dev/pixelrunner-shared"
