@@ -4,6 +4,8 @@ set -eu
 
 DATABASE_FILE="../db.sqlite"
 WEBP_LOCATION="./public"
+VENDOR_APPS_PATH="vendor/tronbyt/apps"
+CONTRIB_APPS_PATH="src/contrib"
 CONTROLLER_DIR=""
 MIGRATIONS_DIR=""
 GENERATED_MIGRATION_FILE=""
@@ -11,9 +13,19 @@ MIGRATION_TEMP_DIR=""
 MIGRATION_BACKUP_DIR=""
 NEW_APPLET_COUNT=0
 
+# Emit applet directory paths (relative to SCRIPT_DIR) from every configured
+# source root. Dirs without a manifest.yaml are silently skipped.
+# ponytail: contrib dirs without manifest (e.g. clock/) are dropped here instead of erroring downstream.
 getAvailableApplets() {
-  local applets=$(find "$SCRIPT_DIR/$VENDOR_APPS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-  echo "$applets"
+  local root abs dir
+  for root in "$VENDOR_APPS_PATH" "$CONTRIB_APPS_PATH"; do
+    abs="$SCRIPT_DIR/$root"
+    [ -d "$abs" ] || continue
+    while IFS= read -r dir; do
+      [ -f "$dir/manifest.yaml" ] || continue
+      printf '%s\n' "${dir#$SCRIPT_DIR/}"
+    done < <(find "$abs" -mindepth 1 -maxdepth 1 -type d)
+  done
 }
 
 appletExistsInDb() {
@@ -25,13 +37,14 @@ appletExistsInDb() {
 renderAppletImage() {
   local packageName="$1"
   local fileName="$2"
+  local sourceRel="$3"
 
-  if [ -z "$packageName" ] || [ -z "$fileName" ]; then
-    echo "ERROR: Incorrect manifest analysis: [$packageName] [$fileName]"
+  if [ -z "$packageName" ] || [ -z "$fileName" ] || [ -z "$sourceRel" ]; then
+    echo "ERROR: Incorrect manifest analysis: [$packageName] [$fileName] [$sourceRel]"
     exit 1
   fi
 
-  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$SCRIPT_DIR/$VENDOR_APPS_PATH/$packageName/$fileName")
+  local image=$(node ./bin/pixlet.mjs render -o "$WEBP_LOCATION/$packageName.webp" -w 64 -t 32 -z 5 --locale en --format webp "$SCRIPT_DIR/$sourceRel/$fileName")
   echo "$image"
 }
 
@@ -49,7 +62,10 @@ requireManifestField() {
 # Missing fields are reported as the literal "null"; packageName and fileName
 # get their derived fallbacks applied here (they are always needed for rendering).
 loadAppletDetails() {
-  local applet_dir="$SCRIPT_DIR/$VENDOR_APPS_PATH/$1"
+  local applet_rel="$1"
+  local applet_dir="$SCRIPT_DIR/$applet_rel"
+  local applet_name
+  applet_name=$(basename "$applet_rel")
   local manifest_file="$applet_dir/manifest.yaml"
 
   if [[ ! -f "$manifest_file" ]]; then
@@ -64,13 +80,13 @@ loadAppletDetails() {
 
   # packageName fallback: the applet directory name.
   if [ "$APPLET_PACKAGE_NAME" = "null" ]; then
-    APPLET_PACKAGE_NAME="$1"
+    APPLET_PACKAGE_NAME="$applet_name"
   fi
 
   # fileName fallback: <applet>.star, otherwise a unique *.star in the directory.
   if [ "$APPLET_FILE_NAME" = "null" ]; then
-    if [ -f "$applet_dir/$1.star" ]; then
-      APPLET_FILE_NAME="$1.star"
+    if [ -f "$applet_dir/$applet_name.star" ]; then
+      APPLET_FILE_NAME="$applet_name.star"
     else
       local star_files star_count
       star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
@@ -78,7 +94,7 @@ loadAppletDetails() {
       if [ "$star_count" -eq 1 ]; then
         APPLET_FILE_NAME=$(basename "$star_files")
       else
-        echo "ERROR: missing field 'fileName' in $manifest_file; no $1.star and could not pick a unique *.star in $applet_dir (found $star_count)" >&2
+        echo "ERROR: missing field 'fileName' in $manifest_file; no $applet_name.star and could not pick a unique *.star in $applet_dir (found $star_count)" >&2
         exit 1
       fi
     fi
@@ -189,8 +205,6 @@ if ! command -v yq &> /dev/null; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# VENDOR_APPS_PATH="vendor/tidbyt/apps"
-VENDOR_APPS_PATH="vendor/tronbyt/apps"
 SKIP_DB=false
 
 trap cleanupTemp EXIT
@@ -203,21 +217,22 @@ fi
 
 checkWebpDirectory
 applets=$(getAvailableApplets)
-while IFS= read -r applet; do
-  echo "Render $applet"
-  loadAppletDetails "$applet"
-  renderAppletImage "$APPLET_PACKAGE_NAME" "$APPLET_FILE_NAME"
+while IFS= read -r applet_rel; do
+  [ -z "$applet_rel" ] && continue
+  echo "Render $applet_rel"
+  loadAppletDetails "$applet_rel"
+  renderAppletImage "$APPLET_PACKAGE_NAME" "$APPLET_FILE_NAME" "$applet_rel"
 
   if [ "$SKIP_DB" == "true" ]; then
     echo "-skipping database tasks-"
     continue
   fi
 
-  if appletExistsInDb "$applet"; then continue; fi
+  if appletExistsInDb "$APPLET_PACKAGE_NAME"; then continue; fi
 
   echo "(new applet) - appending record to migration"
 
-  manifest_file="$SCRIPT_DIR/$VENDOR_APPS_PATH/$applet/manifest.yaml"
+  manifest_file="$SCRIPT_DIR/$applet_rel/manifest.yaml"
   requireManifestField 'name' "$APPLET_NAME" "$manifest_file"
   requireManifestField 'summary' "$APPLET_SUMMARY" "$manifest_file"
   requireManifestField 'desc' "$APPLET_DESC" "$manifest_file"

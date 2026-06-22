@@ -21,6 +21,8 @@ set -eu
 VENDOR_RELATIVE_PATH="vendor/tronbyt"
 VENDOR_APPS_PATH="$VENDOR_RELATIVE_PATH/apps"
 VENDOR_APPS_GIT_PREFIX="apps"
+CONTRIB_APPS_PATH="src/contrib"
+DATABASE_FILE=""
 
 CONTROLLER_DIR=""
 MIGRATIONS_DIR=""
@@ -61,10 +63,20 @@ listAppletDirs() {
   fi
 }
 
-# Parse the current on-disk manifest and populate APPLET_* vars.
-# Fallbacks for packageName and fileName match render-applets.sh.
+appletExistsInDb() {
+  local count
+  count=$(sqlite3 "$DATABASE_FILE" "select count(*) from applets where package_name = CAST(X'$(hex_value "$1")' AS TEXT);")
+  [ "$count" -gt 0 ]
+}
+
+# Parse the current on-disk manifest and populate APPLET_* vars. The arg is
+# the applet's source dir relative to SCRIPT_DIR (e.g. "vendor/tronbyt/apps/<x>"
+# or "src/contrib/<x>"). Fallbacks for packageName and fileName match render-applets.sh.
 loadAppletDetails() {
-  local applet_dir="$SCRIPT_DIR/$VENDOR_APPS_PATH/$1"
+  local applet_rel="$1"
+  local applet_dir="$SCRIPT_DIR/$applet_rel"
+  local applet_name
+  applet_name=$(basename "$applet_rel")
   local manifest_file="$applet_dir/manifest.yaml"
 
   if [[ ! -f "$manifest_file" ]]; then
@@ -77,12 +89,12 @@ loadAppletDetails() {
   )
 
   if [ "$APPLET_PACKAGE_NAME" = "null" ]; then
-    APPLET_PACKAGE_NAME="$1"
+    APPLET_PACKAGE_NAME="$applet_name"
   fi
 
   if [ "$APPLET_FILE_NAME" = "null" ]; then
-    if [ -f "$applet_dir/$1.star" ]; then
-      APPLET_FILE_NAME="$1.star"
+    if [ -f "$applet_dir/$applet_name.star" ]; then
+      APPLET_FILE_NAME="$applet_name.star"
     else
       local star_files star_count
       star_files=$(find "$applet_dir" -maxdepth 1 -type f -name '*.star')
@@ -171,10 +183,10 @@ emitInsertSection() {
     >> "$GENERATED_MIGRATION_FILE"
 
   local first=true
-  local applet manifest_file
-  for applet in "${ADDED_APPLETS[@]}"; do
-    loadAppletDetails "$applet"
-    manifest_file="$SCRIPT_DIR/$VENDOR_APPS_PATH/$applet/manifest.yaml"
+  local applet_rel manifest_file
+  for applet_rel in "${ADDED_APPLETS[@]}"; do
+    loadAppletDetails "$applet_rel"
+    manifest_file="$SCRIPT_DIR/$applet_rel/manifest.yaml"
     requireManifestField 'name' "$APPLET_NAME" "$manifest_file"
     requireManifestField 'summary' "$APPLET_SUMMARY" "$manifest_file"
     requireManifestField 'desc' "$APPLET_DESC" "$manifest_file"
@@ -204,10 +216,10 @@ emitUpdateSection() {
 
   printf "\n-- UPDATED APPLETS\n" >> "$GENERATED_MIGRATION_FILE"
 
-  local applet manifest_file
-  for applet in "${UPDATED_APPLETS[@]}"; do
-    loadAppletDetails "$applet"
-    manifest_file="$SCRIPT_DIR/$VENDOR_APPS_PATH/$applet/manifest.yaml"
+  local applet_rel manifest_file
+  for applet_rel in "${UPDATED_APPLETS[@]}"; do
+    loadAppletDetails "$applet_rel"
+    manifest_file="$SCRIPT_DIR/$applet_rel/manifest.yaml"
     requireManifestField 'name' "$APPLET_NAME" "$manifest_file"
     requireManifestField 'summary' "$APPLET_SUMMARY" "$manifest_file"
     requireManifestField 'desc' "$APPLET_DESC" "$manifest_file"
@@ -270,10 +282,16 @@ if ! command -v xxd &> /dev/null; then
   echo "Error: install 'xxd' as this is a required dependency."
   exit 1
 fi
+if ! command -v sqlite3 &> /dev/null; then
+  echo "Error: install 'sqlite3' as this is a required dependency."
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR_DIR="$SCRIPT_DIR/$VENDOR_RELATIVE_PATH"
 APPS_DIR="$SCRIPT_DIR/$VENDOR_APPS_PATH"
+CONTRIB_DIR="$SCRIPT_DIR/$CONTRIB_APPS_PATH"
+DATABASE_FILE="$SCRIPT_DIR/../db.sqlite"
 
 trap cleanupTemp EXIT
 
@@ -305,7 +323,7 @@ AFTER_APPLETS=$(listAppletDirs "$APPS_DIR")
 
 # Classify applets — Bash 3.2 compatible (no mapfile).
 while IFS= read -r line; do
-  [ -n "$line" ] && ADDED_APPLETS+=("$line")
+  [ -n "$line" ] && ADDED_APPLETS+=("$VENDOR_APPS_PATH/$line")
 done < <(comm -13 <(printf '%s\n' "$BEFORE_APPLETS") <(printf '%s\n' "$AFTER_APPLETS"))
 
 while IFS= read -r line; do
@@ -323,9 +341,23 @@ fi
 while IFS= read -r applet; do
   [ -z "$applet" ] && continue
   if printf '%s\n' "$CHANGED_FILES" | grep -qE "^${VENDOR_APPS_GIT_PREFIX}/${applet}(/|$)"; then
-    UPDATED_APPLETS+=("$applet")
+    UPDATED_APPLETS+=("$VENDOR_APPS_PATH/$applet")
   fi
 done <<< "$COMMON_APPLETS"
+
+# Contrib applets live in this repo, not the submodule, so there's no clean
+# before/after diff. Pick up dirs with a manifest that aren't in the DB yet.
+# ponytail: ADD-only for contrib; UPDATE/DELETE need manual migrations or a snapshot mechanism.
+if [ -d "$CONTRIB_DIR" ]; then
+  while IFS= read -r contrib_path; do
+    [ -f "$contrib_path/manifest.yaml" ] || continue
+    contrib_rel="${contrib_path#$SCRIPT_DIR/}"
+    loadAppletDetails "$contrib_rel"
+    if ! appletExistsInDb "$APPLET_PACKAGE_NAME"; then
+      ADDED_APPLETS+=("$contrib_rel")
+    fi
+  done < <(find "$CONTRIB_DIR" -mindepth 1 -maxdepth 1 -type d)
+fi
 
 echo "Detected:"
 echo "  added:   ${#ADDED_APPLETS[@]}"
