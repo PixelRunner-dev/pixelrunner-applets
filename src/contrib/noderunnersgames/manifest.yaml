@@ -1,0 +1,15 @@
+---
+id: noderunners-games
+name: Noderunners Games
+summary: Leaderboard and jackpot of games
+desc: Shows the leaderboard and jackpot per game at Noderunners Games. The jackpot is the amount in sats.
+author: PMK (@pmk)
+fileName: noderunners_games.star
+packageName: noderunnersgames
+recommendedInterval: 5
+category: gaming
+tags:
+  - gaming
+  - tracking
+published: '2026-06-22T21:00:00Z'
+updated: '2026-06-22T21:00:00Z'
