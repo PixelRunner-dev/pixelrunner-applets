@@ -5,8 +5,8 @@ Description: Shows various classic First Person Shooter games, like Duke Nukem 3
 Author: PMK (@pmk)
 """
 
-load("render.star", "render")
 load("random.star", "random")
+load("render.star", "render")
 load("schema.star", "schema")
 load("src/blakestone.webp", BLAKESTONE_ASSET = "file")
 load("src/doom-2.webp", DOOM_2_ASSET = "file")

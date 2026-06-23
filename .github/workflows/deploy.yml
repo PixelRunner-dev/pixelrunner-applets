@@ -32,6 +32,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Check and lint contrib applets
+        run: |
+          ./bin/pixlet.mjs check --recursive src/contrib
+          ./bin/pixlet.mjs lint --recursive src/contrib
+
       - name: (Re-)render applets
         run: |
           npm run render -- --skip-db
