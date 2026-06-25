@@ -48,13 +48,23 @@ DEFAULT_GAME = GAME_LIST[0].value
 def do_request(ttl_seconds = 60 * 5):
     response = http.get(url = API_GAMES, ttl_seconds = ttl_seconds)
     if response.status_code != 200:
-        fail("Request failed with status %d @ %s", response.status_code, API_GAMES)
+        return None
     return response.json()
 
 def get_game_stats(game = DEFAULT_GAME):
     result = do_request()
+    if not result or "games" not in result:
+        return None
+
     games = result["games"]
-    filtered = [item for item in games if item["slug"] == game][0]
+    filtered = None
+    for item in games:
+        if item["slug"] == game:
+            filtered = item
+            break
+
+    if not filtered:
+        return None
 
     return {
         "game_slug": game,
@@ -313,6 +323,9 @@ def main(config):
         game = get_random_game()
 
     stats = get_game_stats(game)
+
+    if not stats:
+        return []
 
     if not stats["enabled"]:
         return main(config)
