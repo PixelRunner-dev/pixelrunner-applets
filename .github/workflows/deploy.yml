@@ -34,7 +34,10 @@ jobs:
 
       - name: Check and lint contrib applets
         run: |
-          ./bin/pixlet.mjs check --recursive src/contrib
+          # Default --max-render-time is 1s; apps that hit slow upstream APIs
+          # (noderunnersgames) cancel the HTTP request and fail with
+          # "context deadline exceeded". Use a generous bound here.
+          ./bin/pixlet.mjs check --recursive --max-render-time 10s src/contrib
           ./bin/pixlet.mjs lint --recursive src/contrib
 
       - name: (Re-)render applets

@@ -45,9 +45,9 @@ GAME_LIST = [
 ]
 DEFAULT_GAME = GAME_LIST[0].value
 
-def do_request(ttl_seconds = 60 * 5):
+def do_request(ttl_seconds = 60 * 60):
     response = http.get(url = API_GAMES, ttl_seconds = ttl_seconds)
-    if response.status_code != 200:
+    if response == None or response.status_code != 200:
         return None
     return response.json()
 
