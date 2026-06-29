@@ -36,8 +36,10 @@ jobs:
         run: |
           # Default --max-render-time is 1s; apps that hit slow upstream APIs
           # (noderunnersgames) cancel the HTTP request and fail with
-          # "context deadline exceeded". Use a generous bound here.
-          ./bin/pixlet.mjs check --recursive --max-render-time 10s src/contrib
+          # "context deadline exceeded". --skip-broken honours
+          # `broken: true` in an app manifest so flaky upstream-dependent apps
+          # do not gate the rest of the build.
+          ./bin/pixlet.mjs check --recursive --skip-broken --max-render-time 30s src/contrib
           ./bin/pixlet.mjs lint --recursive src/contrib
 
       - name: (Re-)render applets

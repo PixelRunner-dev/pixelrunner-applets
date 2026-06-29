@@ -7,6 +7,11 @@ author: PMK (@pmk)
 fileName: noderunners_games.star
 packageName: noderunnersgames
 recommendedInterval: 5
+broken: true
+brokenReason: >-
+  Upstream API (lightning.druts.nl) is too slow from GitHub-hosted runners and
+  trips pixlet's render-time deadline. Skipped during `pixlet check` only;
+  the render pipeline still produces the WebP when the API responds.
 category: gaming
 tags:
   - gaming
