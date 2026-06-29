@@ -33,10 +33,8 @@ def get_game_asset(game):
     if game == "blakestone":
         return BLAKESTONE_ASSET.readall()
     if game == "doom":
-        if random.number(0, 1) == 0:
+        if random.number(0, 99) < 50:
             return DOOM_ASSET.readall()
-        return DOOM_2_ASSET.readall()
-    if game == "doom-2":
         return DOOM_2_ASSET.readall()
     if game == "dukenukem3d":
         return DUKE_NUKEM_3D_ASSET.readall()
